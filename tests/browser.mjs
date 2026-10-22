@@ -14,10 +14,11 @@ try {
   await page.getByRole('heading',{name:'快乐点数棋',exact:true}).waitFor();
   await page.locator('#board-image').evaluate(img=>img.decode());
   assert.equal(await page.locator('.piece').count(),2);
-  await page.getByRole('button',{name:'路线：开',exact:true}).click();
-  assert.equal(await page.locator('#route-svg').isVisible(),false,'route off must actually hide the SVG');
+  assert.equal(await page.locator('#route-svg').isVisible(),false,'route starts hidden');
   await page.getByRole('button',{name:'路线：关',exact:true}).click();
   assert.equal(await page.locator('#route-svg').isVisible(),true);
+  await page.getByRole('button',{name:'路线：开',exact:true}).click();
+  assert.equal(await page.locator('#route-svg').isVisible(),false,'route off must actually hide the SVG');
   await page.getByRole('button',{name:'朗读：开',exact:true}).click();
   // A real roll changes one position and persists the next player's turn.
   await page.getByRole('button',{name:'掷骰子',exact:true}).click();
@@ -36,6 +37,7 @@ try {
   assert.deepEqual((await stored(page)).positions,first.positions);
   await page.getByRole('button',{name:'重新开始',exact:true}).click();
   await page.getByRole('button',{name:'开始新一局',exact:true}).click();
+  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('kids-board-v1-counting')).rounds===0);
   assert.deepEqual((await stored(page)).positions,[0,0]);
   // Change player count and verify all pawns remain visible.
   await page.locator('#player-count').selectOption('4');
@@ -70,6 +72,7 @@ try {
   assert.ok(await page.locator('#roll').isDisabled());
   await page.getByRole('button',{name:'重新开始',exact:true}).click();
   await page.getByRole('button',{name:'开始新一局',exact:true}).click();
+  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('kids-board-v1-literacy')).rounds===0);
   await page.getByRole('button',{name:'第1格：白',exact:true}).click();
   await page.screenshot({path:'test-results/desktop-literacy.png',fullPage:true});
   // Escape must cancel even after an earlier confirmed reset.
@@ -85,6 +88,10 @@ try {
   mobile.on('pageerror',e=>errors.push(e.message));
   await mobile.goto(base);
   await mobile.locator('#board-image').evaluate(img=>img.decode());
+  const mobilePieceSize=await mobile.locator('#piece-0').evaluate(el=>el.getBoundingClientRect().width);
+  assert.ok(mobilePieceSize>=30,'mobile pieces must remain at least 30px wide');
+  const mobilePair=await mobile.locator('.piece').evaluateAll(els=>els.map(e=>{const r=e.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2,w:r.width};}));
+  assert.ok(Math.hypot(mobilePair[0].x-mobilePair[1].x,mobilePair[0].y-mobilePair[1].y)>=mobilePair[0].w*.9,'same-cell pieces must not collapse together at the board edge');
   assert.ok(await mobile.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'mobile page must not overflow');
   await mobile.getByRole('button',{name:'放大棋盘',exact:true}).click();
   assert.ok(await mobile.locator('#zoom-mount').evaluate(el=>el.scrollWidth>el.clientWidth),'zoom must allow panning');
@@ -110,6 +117,7 @@ try {
   assert.ok(await animated.locator('#roll').isDisabled());
   assert.ok(await animated.locator('#tab-literacy').isDisabled());
   assert.ok(await animated.locator('#player-count').isDisabled());
+  await animated.waitForFunction(()=>document.querySelector('.piece-visual')?.getAnimations().some(a=>a.playState==='running'));
   await animated.waitForFunction(()=>!document.getElementById('roll').disabled);
   assert.equal((await stored(animated)).rounds,1,'animation completes exactly one turn');
   await animated.close();

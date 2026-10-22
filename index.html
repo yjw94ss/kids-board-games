@@ -8,6 +8,7 @@
   <title>一起走棋 · 亲子棋盘</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="pieces.css?v=2">
 </head>
 <body>
   <div class="app">
@@ -37,7 +38,7 @@
       <div class="game-heading">
         <div><p class="eyebrow" id="board-subtitle">数一数，向前走</p><h1 id="board-title">快乐点数棋</h1></div>
         <div class="heading-actions">
-          <button class="quiet-button" id="route-toggle" aria-pressed="true">路线：开</button>
+          <button class="quiet-button" id="route-toggle" aria-pressed="false">路线：关</button>
           <button class="quiet-button" id="zoom-open">放大棋盘</button>
         </div>
       </div>
@@ -47,7 +48,7 @@
           <div id="board-mount">
             <div id="board-surface" class="board-surface">
               <img id="board-image" src="assets/counting.png" width="1491" height="1055" alt="快乐点数棋，四排动物格子由两侧交替连接。">
-              <svg id="route-svg" viewBox="0 0 1491 1055" aria-hidden="true"></svg>
+              <svg id="route-svg" viewBox="0 0 1491 1055" aria-hidden="true" hidden></svg>
               <div id="cell-layer"></div>
               <div id="piece-layer"></div>
               <div id="start-badge" class="endpoint start">起点</div>
@@ -85,6 +86,6 @@
   <dialog id="reset-dialog" class="reset-dialog"><form method="dialog"><h2>开始新的一局？</h2><p>当前棋盘的棋子会回到起点。</p><div class="dialog-actions"><button value="cancel" class="quiet-button">继续这一局</button><button value="confirm" class="primary-button">开始新一局</button></div></form></dialog>
   <dialog id="zoom-dialog" class="zoom-dialog"><div class="zoom-toolbar"><strong>放大棋盘</strong><span>小屏可左右滑动查看</span><button id="zoom-close" class="primary-button">返回游戏</button></div><div id="zoom-mount" class="zoom-mount"></div></dialog>
   <noscript><p>请在浏览器中开启 JavaScript 后玩游戏。</p></noscript>
-  <script type="module" src="app.js"></script>
+  <script type="module" src="app.js?v=2"></script>
 </body>
 </html>

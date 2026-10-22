@@ -12,10 +12,11 @@ const games = {};
 let boardId = 'counting';
 let busy = false;
 let sound = true;
-let showRoute = true;
+let showRoute = false;
 let lastWord = '';
 let pendingReset = null;
 let lastFocus = null;
+let visualPositions = [];
 const histories = {counting:[],literacy:[]};
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 const pause = ms => new Promise(resolve=>setTimeout(resolve,reduced.matches?0:ms));
@@ -55,27 +56,70 @@ function drawDie(value) {
 }
 
 function pieceSvg(index) {
-  return `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M11 40c0-9 2-16 7-21a9 9 0 1 1 12 0c5 5 7 12 7 21 0 5-26 5-26 0Z" fill="${players[index].color}" stroke="#e8dcc7" stroke-width="2.5"/><path d="M18 32c1-5 2-7 3-9" stroke="#e8dcc7" stroke-opacity=".35" stroke-width="3" stroke-linecap="round"/><text x="24" y="38" text-anchor="middle" fill="#e8dcc7" font-size="16" font-family="Arial,sans-serif" font-weight="700">${index+1}</text></svg>`;
+  return `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="25" r="21" fill="#353b2c" fill-opacity=".25"/><circle cx="24" cy="23" r="20.5" fill="${players[index].color}" stroke="#fffdf5" stroke-width="4"/><circle cx="24" cy="23" r="15" fill="none" stroke="#fffdf5" stroke-opacity=".35" stroke-width="1.5"/><path d="M12 17a14 14 0 0 1 12-7" fill="none" stroke="#fffdf5" stroke-opacity=".6" stroke-width="3" stroke-linecap="round"/><text x="24" y="31" text-anchor="middle" fill="#fffdf5" font-size="24" font-family="Arial,sans-serif" font-weight="800">${index+1}</text></svg>`;
 }
 
 function placePiece(index, position) {
+  visualPositions[index]=position;
+  layoutPieces();
+}
+
+function layoutPieces() {
   const state=games[boardId];
   const board=boards[boardId];
-  const cell=board.cells[position];
-  const el=$(`piece-${index}`);
-  // Fixed corners keep all four pieces visible even on the same square.
-  const offsets=[[-20,-21],[20,-21],[-20,20],[20,20]];
-  const [dx,dy]=state.count===1?[0,0]:offsets[index];
-  el.style.left=`${(cell.x+dx)/board.width*100}%`;
-  el.style.top=`${(cell.y+dy)/board.height*100}%`;
-  el.setAttribute('aria-label',`${players[index].name}，第${position}格，${cell.label}`);
-  el.dataset.position=position;
+  const surface=$('board-surface').getBoundingClientRect();
+  if (!surface.width || !surface.height) return;
+  visualPositions.forEach((position,index)=>{
+    const el=$(`piece-${index}`);
+    if (!el) return;
+    const cell=board.cells[position];
+    const group=visualPositions.flatMap((p,i)=>p===position?[i]:[]);
+    const arrangements={1:[[0,0]],2:[[-.48,0],[.48,0]],3:[[-.48,-.4],[.48,-.4],[0,.48]],4:[[-.48,-.48],[.48,-.48],[-.48,.48],[.48,.48]]};
+    const arrangement=arrangements[group.length];
+    const [dx,dy]=arrangement[group.indexOf(index)];
+    const size=el.getBoundingClientRect().width;
+    const margin=size*.62;
+    // Shift the whole group inward; clamping each token separately would stack
+    // tokens together when several players share an edge square.
+    const minX=Math.min(...arrangement.map(o=>o[0]))*size;
+    const maxX=Math.max(...arrangement.map(o=>o[0]))*size;
+    const minY=Math.min(...arrangement.map(o=>o[1]))*size;
+    const maxY=Math.max(...arrangement.map(o=>o[1]))*size;
+    const cx=Math.max(margin-minX,Math.min(surface.width-margin-maxX,cell.x/board.width*surface.width));
+    const cy=Math.max(margin-minY,Math.min(surface.height-margin-maxY,cell.y/board.height*surface.height));
+    const x=cx+dx*size, y=cy+dy*size;
+    el.style.left=`${x/surface.width*100}%`;
+    el.style.top=`${y/surface.height*100}%`;
+    el.setAttribute('aria-label',`${players[index].name}，第${position}格，${cell.label}`);
+    el.dataset.position=position;
+  });
 }
 
 function drawPieces() {
   const state=games[boardId];
-  $('piece-layer').innerHTML=state.positions.map((_,i)=>`<div class="piece ${state.turn===i?'active':''}" id="piece-${i}" role="img" style="--piece-color:${players[i].color}">${pieceSvg(i)}</div>`).join('');
-  state.positions.forEach((position,i)=>placePiece(i,position));
+  visualPositions=[...state.positions];
+  $('piece-layer').innerHTML=state.positions.map((_,i)=>`<div class="piece ${state.turn===i?'active':''}" id="piece-${i}" role="img" style="--piece-color:${players[i].color}"><span class="piece-visual">${pieceSvg(i)}</span></div>`).join('');
+  layoutPieces();
+}
+
+async function hopPiece(index,position,ladder) {
+  const piece=$(`piece-${index}`);
+  const duration=ladder?620:380;
+  piece.style.setProperty('--move-duration',`${duration}ms`);
+  placePiece(index,position);
+  if (reduced.matches) return;
+  const visual=piece.querySelector('.piece-visual');
+  const lift=ladder?-26:-16;
+  const hop=visual.animate([
+    {transform:'translateY(0) scale(1)',offset:0},
+    {transform:'translateY(3px) scale(1.08,.9)',offset:.12},
+    {transform:`translateY(${lift}px) scale(1.06,1.08)`,offset:.48},
+    {transform:'translateY(0) scale(1.12,.86)',offset:.84},
+    {transform:'translateY(0) scale(1)',offset:1},
+  ],{duration,easing:'cubic-bezier(.25,.1,.25,1)'});
+  await hop.finished;
+  visual.animate([{filter:'brightness(1.35)'},{filter:'brightness(1)'}],{duration:190});
+  await pause(75);
 }
 
 function inspectCell(cell, index) {
@@ -197,15 +241,15 @@ async function roll() {
   piece.classList.add('moving');
   let steps=0;
   for (const position of result.path) {
-    placePiece(result.player,position);
     const special=result.effect && position===result.effect.to;
     steps++;
     $('status').textContent=special?(result.effect.kind==='ladder'?'爬上梯子，走一条捷径！':`${boards[boardId].cells[result.effect.from].label}，再往前走。`):`${name}：第 ${steps} 步`;
-    await pause(special?470:265);
+    await hopPiece(result.player,position,special && result.effect.kind==='ladder');
   }
   games[boardId]=result.state;
   busy=false;
   piece.classList.remove('moving');
+  piece.style.removeProperty('--move-duration');
   lastWord=result.landed.label;
   $('landed-card').hidden=false;
   $('landed-caption').textContent=`${name}来到`;
@@ -279,4 +323,5 @@ document.addEventListener('keydown',event=>{
   }
 });
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&'speechSynthesis' in window)speechSynthesis.cancel();});
+new ResizeObserver(layoutPieces).observe($('board-surface'));
 updateSound();switchBoard(boardId);

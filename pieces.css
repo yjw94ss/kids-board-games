@@ -1,0 +1,37 @@
+/* Readable at phone scale, with contrasting rims against either printed board. */
+.piece {
+  width: clamp(34px, 6.8%, 68px);
+  filter: none;
+  transition: left var(--move-duration, 380ms) cubic-bezier(.25,.1,.25,1),
+              top var(--move-duration, 380ms) cubic-bezier(.25,.1,.25,1);
+}
+.piece-visual {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 85%;
+  filter: drop-shadow(0 3px 2px #353b2c70);
+}
+.piece.active::after {
+  inset: -6%;
+  border: 3px solid #fffdf5;
+  outline: 2px solid var(--piece-color);
+  opacity: 1;
+  box-shadow: 0 0 0 5px #e8dcc75c;
+  animation: current-piece 2s ease-in-out infinite;
+}
+.piece.moving { z-index: 7; }
+.piece.moving::after { animation: none; opacity: .65; }
+@keyframes current-piece {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 3px #e8dcc75c; }
+  50% { transform: scale(1.08); box-shadow: 0 0 0 7px #e8dcc700; }
+}
+@media (max-width: 760px) {
+  .piece { width: clamp(34px, 7.6%, 44px); }
+  .piece.active::after { border-width: 2px; }
+}
+.zoom-mount .piece { width: clamp(44px, 6.2%, 70px); }
+@media (prefers-reduced-motion: reduce) {
+  .piece { transition: none; }
+  .piece.active::after { animation: none; }
+}
