@@ -4,9 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "node scripts/build.mjs",
     "test": "node --test tests/engine.test.js",
-    "dev": "python3 -m http.server 8126 --bind 127.0.0.1",
-    "test:browser": "node tests/browser.mjs"
+    "dev": "npm run build && python3 -m http.server 8126 --bind 127.0.0.1",
+    "test:browser": "npm run build && node tests/browser.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1"

@@ -121,6 +121,40 @@ try {
   await animated.waitForFunction(()=>!document.getElementById('roll').disabled);
   assert.equal((await stored(animated)).rounds,1,'animation completes exactly one turn');
   await animated.close();
+  // Older desktop browsers must still initialize without optional modern APIs.
+  const compatible=await browser.newPage({viewport:{width:1280,height:900}});
+  compatible.on('pageerror',e=>errors.push(e.message));
+  await compatible.addInitScript(()=>{
+    Array.prototype.at=undefined;
+    window.ResizeObserver=undefined;
+    Element.prototype.animate=undefined;
+  });
+  await compatible.goto(base);
+  await compatible.waitForFunction(()=>document.querySelectorAll('.piece').length===2,{},{timeout:5000});
+  assert.equal(await compatible.locator('.die i.on').count(),1);
+  await compatible.locator('#roll').click();
+  await compatible.waitForFunction(()=>!document.getElementById('roll').disabled);
+  assert.equal((await stored(compatible)).rounds,1);
+  assert.equal(await compatible.locator('#load-error').isVisible(),false);
+  await compatible.close();
+  const failedLoad=await browser.newPage();
+  await failedLoad.route('**/game.js*',route=>route.abort());
+  await failedLoad.goto(base);
+  await failedLoad.locator('#load-error').waitFor({state:'visible'});
+  assert.equal(await failedLoad.locator('.die i.on').count(),1,'static die remains visible during loading failure');
+  await failedLoad.getByRole('button',{name:'重新加载',exact:true}).waitFor();
+  await failedLoad.close();
+  const slowLoad=await browser.newPage();
+  await slowLoad.route('**/game.js*',async route=>{
+    await new Promise(resolve=>setTimeout(resolve,8500));
+    await route.continue();
+  });
+  const loading=slowLoad.goto(base);
+  await slowLoad.locator('#load-error').waitFor({state:'visible'});
+  await loading;
+  await slowLoad.waitForFunction(()=>window.__boardGameReady===true);
+  assert.equal(await slowLoad.locator('#load-error').isVisible(),false,'a slow but successful load must clear the retry warning');
+  await slowLoad.close();
   assert.deepEqual(errors,[],'no browser runtime errors');
   console.log('PASS: desktop/mobile rolling, persistence, reset, four players, corrected cells, zoom, victory, overflow, no runtime errors');
 } finally { await browser.close(); }

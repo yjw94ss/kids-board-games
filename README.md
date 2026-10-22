@@ -10,7 +10,7 @@
 npm run dev
 ```
 
-打开终端输出的本地8126端口地址。前端使用原生ES modules，无构建步骤，无运行时第三方依赖。
+打开终端输出的本地8126端口地址。源代码采用原生JavaScript，启动时自动打包为单个传统脚本game.js，无运行时第三方依赖。修改app.js、board-data.js或engine.js后运行 `npm run build` 更新game.js；发布时一并提交它。
 
 ## 检查
 

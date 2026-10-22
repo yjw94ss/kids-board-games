@@ -109,6 +109,7 @@ async function hopPiece(index,position,ladder) {
   placePiece(index,position);
   if (reduced.matches) return;
   const visual=piece.querySelector('.piece-visual');
+  if (typeof visual.animate!=='function') { await pause(duration+75); return; }
   const lift=ladder?-26:-16;
   const hop=visual.animate([
     {transform:'translateY(0) scale(1)',offset:0},
@@ -128,8 +129,10 @@ function inspectCell(cell, index) {
   $('landed-card').hidden=false;
   $('landed-caption').textContent=index===0?'起点':`第 ${index} 格`;
   $('landed-word').textContent=cell.label;
-  document.querySelector('.cell-hit.inspected')?.classList.remove('inspected');
-  document.querySelector(`.cell-hit[data-index="${index}"]`)?.classList.add('inspected');
+  const previous=document.querySelector('.cell-hit.inspected');
+  const selected=document.querySelector(`.cell-hit[data-index="${index}"]`);
+  if (previous) previous.classList.remove('inspected');
+  if (selected) selected.classList.add('inspected');
   say(cell.label);
 }
 
@@ -197,7 +200,8 @@ function drawStatus() {
   $('round-count').textContent=`第 ${Math.floor(state.rounds/state.count)+1} 回合`;
   $('players').innerHTML=state.positions.map((position,i)=>`<div class="player-row ${i===state.turn?'current':''}" style="--progress-color:${players[i].color}"><span class="player-color" style="background:${players[i].color}"></span><span>${players[i].name}${i===state.winner?' · 获胜':''}</span><small>${position===end?'终点':`已走 ${position} / ${end}`}</small><span class="player-progress" style="width:${position/end*100}%"></span></div>`).join('');
   state.positions.forEach((position,i)=>{
-    $(`piece-${i}`)?.classList.toggle('active',i===state.turn);
+    const piece=$(`piece-${i}`);
+    if (piece) piece.classList.toggle('active',i===state.turn);
   });
 }
 
@@ -219,7 +223,8 @@ function switchBoard(id) {
 
 function randomRoll() {
   const data=new Uint32Array(1);
-  do { crypto.getRandomValues(data); } while (data[0]>=4294967292);
+  if (!window.crypto || typeof window.crypto.getRandomValues!=='function') return Math.floor(Math.random()*6)+1;
+  do { window.crypto.getRandomValues(data); } while (data[0]>=4294967292);
   return data[0]%6+1;
 }
 
@@ -286,7 +291,7 @@ $('player-count').addEventListener('change',()=>{
 });
 $('reset-dialog').addEventListener('close',()=>{
   if ($('reset-dialog').returnValue==='confirm' && pendingReset!==null) resetGame(pendingReset);
-  else lastFocus?.focus();
+  else if (lastFocus) lastFocus.focus();
   pendingReset=null;
 });
 document.querySelectorAll('[data-board]').forEach(b=>b.addEventListener('click',()=>switchBoard(b.dataset.board)));
@@ -323,5 +328,12 @@ document.addEventListener('keydown',event=>{
   }
 });
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&'speechSynthesis' in window)speechSynthesis.cancel();});
-new ResizeObserver(layoutPieces).observe($('board-surface'));
+if (typeof window.ResizeObserver==='function') new window.ResizeObserver(layoutPieces).observe($('board-surface'));
+else {
+  window.addEventListener('resize',layoutPieces);
+  $('zoom-dialog').addEventListener('close',()=>requestAnimationFrame(layoutPieces));
+  $('zoom-open').addEventListener('click',()=>requestAnimationFrame(layoutPieces));
+}
 updateSound();switchBoard(boardId);
+window.__boardGameReady=true;
+$('load-error').hidden=true;

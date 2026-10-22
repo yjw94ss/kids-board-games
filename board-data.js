@@ -12,7 +12,7 @@ for (let row = 0; row < 4; row++) {
   if (row < 3) counting.push({x:row%2 ? 105 : 1385, y:[287, 571, 827][row], label:['小狐狸','小熊','背影'][row], row:row+.5});
 }
 counting[0].label = '起点';
-counting.at(-1).label = '终点';
+counting[counting.length-1].label = '终点';
 
 // Coordinates refer to the unscaled 1491 × 1055 artwork.
 const literacy = [

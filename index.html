@@ -8,7 +8,7 @@
   <title>一起走棋 · 亲子棋盘</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="pieces.css?v=2">
+  <link rel="stylesheet" href="pieces.css?v=3">
 </head>
 <body>
   <div class="app">
@@ -20,6 +20,8 @@
       <span class="header-note">一颗骰子，一起长大。</span>
       <button id="sound" class="quiet-button" type="button" aria-pressed="true">朗读：开</button>
     </header>
+
+    <div id="load-error" class="load-error" role="alert" hidden><span>游戏没有加载完成，请重新加载后再试。</span><button id="reload-game" class="primary-button" type="button">重新加载</button></div>
 
     <nav class="board-tabs" aria-label="选择棋盘">
       <button class="board-tab selected" id="tab-counting" data-board="counting" aria-pressed="true">
@@ -61,7 +63,7 @@
         <aside class="play-panel" aria-label="掷骰子和玩家信息">
           <div class="turn-line"><span class="player-color" id="turn-color"></span><strong id="turn-title">轮到小橘</strong><span id="turn-number">1 号</span></div>
           <button id="roll" class="roll-button" type="button" aria-label="掷骰子">
-            <span class="die" id="die" role="img" aria-label="等待掷骰子"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+            <span class="die" id="die" role="img" aria-label="等待掷骰子"><i></i><i></i><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i></i></span>
             <span id="roll-label">掷骰子</span>
           </button>
           <p id="status" class="status" role="status" aria-live="polite">小橘先来。点一下骰子出发吧！</p>
@@ -86,6 +88,15 @@
   <dialog id="reset-dialog" class="reset-dialog"><form method="dialog"><h2>开始新的一局？</h2><p>当前棋盘的棋子会回到起点。</p><div class="dialog-actions"><button value="cancel" class="quiet-button">继续这一局</button><button value="confirm" class="primary-button">开始新一局</button></div></form></dialog>
   <dialog id="zoom-dialog" class="zoom-dialog"><div class="zoom-toolbar"><strong>放大棋盘</strong><span>小屏可左右滑动查看</span><button id="zoom-close" class="primary-button">返回游戏</button></div><div id="zoom-mount" class="zoom-mount"></div></dialog>
   <noscript><p>请在浏览器中开启 JavaScript 后玩游戏。</p></noscript>
-  <script type="module" src="app.js?v=2"></script>
+  <script>
+    window.showGameLoadError=function(){document.getElementById('load-error').hidden=false;};
+    document.getElementById('reload-game').addEventListener('click',function(){
+      var url=new URL(window.location.href);
+      url.searchParams.set('reload',String(Date.now()));
+      window.location.replace(url.href);
+    });
+    setTimeout(function(){if(!window.__boardGameReady)window.showGameLoadError();},8000);
+  </script>
+  <script defer src="game.js?v=3" onerror="window.showGameLoadError()"></script>
 </body>
 </html>
